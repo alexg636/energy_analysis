@@ -57,9 +57,11 @@ class BGEBillParser:
     def _extract_gas(self):
         for item in self.gas_details_tbl:
             row = (item[0] or "").splitlines()
-            print(row)
             for entry in row:
                 self._extract_billing_period(self.gas_details, entry)
+                self._extract_total_therms(self.gas_details, entry)
+                self._extract_therm_units(self.gas_details, entry)
+                self._extract_therm_factor(self.gas_details, entry)
                 self._extract_total_price(self.gas_details, entry)
                 self._extract_supply(self.gas_details, row, entry)
                 self._extract_customer_chg(self.gas_details, entry)
@@ -78,6 +80,20 @@ class BGEBillParser:
     def _extract_total_kwh(self, output_dict:dict, entry:str):
         if "Current - Previous" in entry:
             output_dict["total_kWh"] = float(entry.split("= ")[1])
+    ## Total therms
+    def _extract_total_therms(self, output_dict:dict, entry:str):
+        if "Units x Factor" in entry:
+            output_dict["total_therms"] = float(entry.split(" ")[-1])
+    ## Total therm units
+    def _extract_therm_units(self, output_dict:dict, entry:str):
+        if "thermsused" in entry:
+            output_dict["units"] = float(entry.split(" ")[2])
+
+    ## Therm factor
+    def _extract_therm_factor(self, output_dict:dict, entry:str):
+        if "thermsused" in entry:
+            output_dict["therm_factor"] = float(entry.split(" ")[3])
+
     ## Total Price
     def _extract_total_price(self, output_dict:dict, entry:str):
         if "TOTAL" in entry:
@@ -182,10 +198,3 @@ class BGEBillParser:
         # Expects abbreviated month name
         date_obj = datetime.strptime(input_date, "%b%d,%Y")
         return date_obj.strftime("%Y-%m-%d")
-    
-
-test = BGEBillParser()
-test.process_pdf("BGE/20250815.pdf" ,1)
-ed = test.get_electric()
-gas = test.get_gas()
-print(gas)
