@@ -34,6 +34,7 @@ class BGEBillParser:
     
     def process_pdf(self, bill_path:str):
         self.bill_path = bill_path
+        print(bill_path)
         with pdfplumber.open(self.bill_path) as pdf:
             # Possible credits on page 1
             credit_page = pdf.pages[0]
@@ -151,8 +152,12 @@ class BGEBillParser:
     
     ## Customer Charge
     def _extract_customer_chg(self, output_dict:dict, entry:str):
-        if "CustomerCharge" in entry:
-            output_dict["delivery_cust_price"] = float(entry.split(" ")[1])
+        try:
+            if "CustomerCharge" in entry:
+                output_dict["delivery_cust_price"] = float(entry.split(" ")[1])
+        except ValueError as e:
+            print(e)
+            pass
     ## EmPower MD Charge
     def _extract_empower(self, output_dict:dict, entry:str):
         if "EmPowerMDChg" in entry:
