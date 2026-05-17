@@ -10,8 +10,7 @@ class BGEBillParser:
         self.gas_details = {}
 
         # Initialize dictionaries
-        self._init_details("ELECTRIC", self.electric_details)
-        self._init_details("GAS", self.gas_details)
+        self.clear()
     
         # Initialize tables by parsing PDF
         self.electric_details_tbl = []
@@ -51,7 +50,8 @@ class BGEBillParser:
         self._extract_gas()
 
     def clear(self):
-        self._init_details()
+        self._init_details("ELECTRIC", self.electric_details)
+        self._init_details("GAS", self.gas_details)
 
     # Private Methods
     def _extract_credit(self):
@@ -123,7 +123,7 @@ class BGEBillParser:
     ## Optional credits
     def _extract_credit_value(self, output_dict:dict, entry:str):
         if "Otherchargesandcredits" in entry:
-            output_dict["credit_value"] = -1*float(re.search(r"\$(\d+\.\d+)", entry).group(1))
+            output_dict["credit_value"] = -1.0*float(re.search(r"\$(\d+\.\d+)", entry).group(1))
     
     ## Supply
     def _extract_supply(self, output_dict:dict, row:list, entry:str):
@@ -146,8 +146,8 @@ class BGEBillParser:
 
                 # Skips first entry
                 output_dict[rate_energy_key] = float(re.search(pattern, search_idx).group(1))
-                output_dict[rate_key] = float(re.search(r"x\s*(\.\d+)", search_idx).group(1))
-                output_dict[rate_price_key] = search_idx.split(" ")[-1]
+                output_dict[rate_key] = float(re.search(r"x\s+([0-9]*\.?[0-9]+)", search_idx).group(1))
+                output_dict[rate_price_key] = float(search_idx.split(" ")[-1])
     
     ## Customer Charge
     def _extract_customer_chg(self, output_dict:dict, entry:str):
@@ -156,28 +156,31 @@ class BGEBillParser:
     ## EmPower MD Charge
     def _extract_empower(self, output_dict:dict, entry:str):
         if "EmPowerMDChg" in entry:
-            output_dict["delivery_empower_md_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
-            output_dict["delivery_empower_md_price"] = entry.split(" ")[-1]
+            pattern = r"x\s+([0-9]*\.?[0-9]+)"
+            output_dict["delivery_empower_md_rate"] = float(re.search(pattern, entry).group(1))
+            output_dict["delivery_empower_md_price"] = float(entry.split(" ")[-1])
     ## Distribution Charge
     def _extract_distribution(self, output_dict:dict, entry:str):
         if "DistributionChg" in entry:
-            output_dict["delivery_distribution_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
-            output_dict["delivery_distribution_price"] = entry.split(" ")[-1]
+            pattern = r"x\s+([0-9]*\.?[0-9]+)"
+            output_dict["delivery_distribution_rate"] = float(re.search(pattern, entry).group(1))
+            output_dict["delivery_distribution_price"] = float(entry.split(" ")[-1])
     
     ## Maryland Universal Service Program
     def _extract_md_svc(self, output_dict:dict, entry:str):
         if "MDUniversalSvcProg" in entry:
-            output_dict["md_svc_prog_fee_price"] = entry.split(" ")[1]
+            output_dict["md_svc_prog_fee_price"] = float(entry.split(" ")[1])
     ## Environmental Surcharge
     def _extract_env(self, output_dict:dict, entry:str):
         if "EnvirSrchg" in entry:
-            output_dict["env_surchg_fee_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
-            output_dict["env_surchg_fee_price"] = entry.split(" ")[-1]
+            pattern = r"x\s+([0-9]*\.?[0-9]+)"
+            output_dict["env_surchg_fee_rate"] = float(re.search(pattern, entry).group(1))
+            output_dict["env_surchg_fee_price"] = float(entry.split(" ")[-1])
     ## Franchise Tax
     def _extract_franchise(self, output_dict:dict, entry:str):
         if "FranchiseTax" in entry:
             output_dict["franchise_tax_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
-            output_dict["franchise_tax_price"] = entry.split(" ")[-1]
+            output_dict["franchise_tax_price"] = float(entry.split(" ")[-1])
 
 
     def _init_details(self, filter:str, output_dict:dict):
