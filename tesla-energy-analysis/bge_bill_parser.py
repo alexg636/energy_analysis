@@ -46,6 +46,12 @@ class BGEBillParser:
                 self._extract_total_kwh(self.electric_details, entry)
                 self._extract_total_price(self.electric_details, entry)
                 self._extract_supply(self.electric_details, row, entry)
+                self._extract_customer_chg(self.electric_details, entry)
+                self._extract_empower(self.electric_details, entry)
+                self._extract_distribution(self.electric_details, entry)
+                self._extract_md_svc(self.electric_details, entry)
+                self._extract_env(self.electric_details, entry)
+                self._extract_franchise(self.electric_details, entry)
 
     ## Field Extraction methods below
     def _extract_billing_period(self, output_dict:dict, entry:str):
@@ -55,36 +61,68 @@ class BGEBillParser:
             output_dict["billing_period_start"] = self._format_date(dates[0])
             output_dict["billing_period_end"] = self._format_date(dates[1])
 
+    ## Total kWHs
     def _extract_total_kwh(self, output_dict:dict, entry:str):
         if "Current - Previous" in entry:
             output_dict["total_kWh"] = float(entry.split("= ")[1])
-
+    ## Total Price
     def _extract_total_price(self, output_dict:dict, entry:str):
         if "TOTAL" in entry:
             output_dict["total_price_electric"] = float(re.search(r"\$(\d+\.\d+)", entry).group(1))
-
+    
+    ## Supply
     def _extract_supply(self, output_dict:dict, row:list, entry:str):
         if output_dict["class"] == "electric":
-            filters = ["ELECTRICSUPPLY", "BGEELECTRICDELIVERY"]
+            filter = ["ELECTRICSUPPLY", "BGEELECTRICDELIVERY"]
             pattern = r"(\d+(?:\.\d+)?)kWh"
         if output_dict["class"] == "gas":
-            filters = ["GASSUPPLY", "BGEGASDELIVERY"]
+            filter = ["GASSUPPLY", "BGEGASDELIVERY"]
             pattern = r"(\d+(?:\.\d+)?)therms"
 
-            if filter[0] in entry:
-                indices = [i for i, target in enumerate(row) if filter[0] in target or filter[1] in target]
-                number_rates = indices[1] - indices[0] - 1
-                for i in range(0,number_rates):
-                    # Skip first entry b/c it's an anchor
-                    search_idx = row[i+1]
-                    rate_key = f"electric_supply_{i}_rate"
-                    rate_energy_key = f"electric_supply_{i}_energy"
-                    rate_price_key = f"electric_supply_{i}_price"
+        if filter[0] in entry:
+            indices = [i for i, target in enumerate(row) if filter[0] in target or filter[1] in target]
+            number_rates = indices[1] - indices[0] - 1
+            for i in range(0,number_rates):
+                # Skip first entry b/c it's an anchor
+                search_idx = row[i+1]
+                rate_key = f"supply_{i}_rate"
+                rate_energy_key = f"supply_{i}_energy"
+                rate_price_key = f"supply_{i}_price"
 
-                    # Skips first entry
-                    output_dict[rate_energy_key] = float(re.search(r"(\d+(?:\.\d+)?)kWh", search_idx).group(1))
-                    output_dict[rate_key] = float(re.search(r"x\s*(\.\d+)", search_idx).group(1))
-                    output_dict[rate_price_key] = search_idx.split(" ")[-1]
+                # Skips first entry
+                output_dict[rate_energy_key] = float(re.search(r"(\d+(?:\.\d+)?)kWh", search_idx).group(1))
+                output_dict[rate_key] = float(re.search(r"x\s*(\.\d+)", search_idx).group(1))
+                output_dict[rate_price_key] = search_idx.split(" ")[-1]
+    
+    ## Customer Charge
+    def _extract_customer_chg(self, output_dict:dict, entry:str):
+        if "CustomerCharge" in entry:
+            output_dict["delivery_cust_price"] = entry.split(" ")[1]
+    ## EmPower MD Charge
+    def _extract_empower(self, output_dict:dict, entry:str):
+        if "EmPowerMDChg" in entry:
+            output_dict["delivery_empower_md_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
+            output_dict["delivery_empower_md_price"] = entry.split(" ")[-1]
+    ## Distribution Charge
+    def _extract_distribution(self, output_dict:dict, entry:str):
+        if "DistributionChg" in entry:
+            output_dict["delivery_distribution_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
+            output_dict["delivery_distribution_price"] = entry.split(" ")[-1]
+    
+    ## Maryland Universal Service Program
+    def _extract_md_svc(self, output_dict:dict, entry:str):
+        if "MDUniversalSvcProg" in entry:
+            output_dict["md_svc_prog_fee_price"] = entry.split(" ")[1]
+    ## Environmental Surcharge
+    def _extract_env(self, output_dict:dict, entry:str):
+        if "EnvirSrchg" in entry:
+            output_dict["env_surchg_fee_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
+            output_dict["env_surchg_fee_price"] = entry.split(" ")[-1]
+    ## Franchise Tax
+    def _extract_franchise(self, output_dict:dict, entry:str):
+        if "FranchiseTax" in entry:
+            output_dict["franchise_tax_rate"] = float(re.search(r"x\s*(\.\d+)", entry).group(1))
+            output_dict["franchise_tax_price"] = entry.split(" ")[-1]
 
 
     def _init_details(self, filter:str, output_dict:dict):
@@ -102,7 +140,7 @@ class BGEBillParser:
             output_dict["delivery_distribution_rate"] = 0
             output_dict["delivery_distribution_price"] = 0
             output_dict["delivery_empower_md_rate"] = 0
-            output_dict["deliver_empower_md_price"] = 0
+            output_dict["delivery_empower_md_price"] = 0
             output_dict["md_svc_prog_fee_price"] = 0
             output_dict["env_surchg_fee_rate"] = 0
             output_dict["env_surchg_fee_price"] = 0
@@ -131,6 +169,6 @@ class BGEBillParser:
     
 
 test = BGEBillParser()
-test.process_pdf("BGE/20250815.pdf" ,1)
+test.process_pdf("BGE/20250716.pdf" ,1)
 ed = test.get_electric()
 print(ed)
