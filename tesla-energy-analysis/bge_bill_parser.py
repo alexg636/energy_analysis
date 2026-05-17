@@ -25,20 +25,42 @@ class BGEBillParser:
     def get_gas(self):
         return dict(sorted(self.gas_details.items()))
     
-    def process_pdf(self, bill_path:str, bill_page:int):
+    def credit(self, bill_path:str):
         self.bill_path = bill_path
         with pdfplumber.open(self.bill_path) as pdf:
-            page = pdf.pages[bill_page]
+            # Data on page 1
+            page = pdf.pages[0]
+            table = page.extract_tables()
+            self.credit = table[0]
+    
+    def process_pdf(self, bill_path:str):
+        self.bill_path = bill_path
+        with pdfplumber.open(self.bill_path) as pdf:
+            # Possible credits on page 1
+            credit_page = pdf.pages[0]
+            self.credit_details_tbl = credit_page.extract_tables()[0]
+            # Data on page 2
+            page = pdf.pages[1]
             table = page.extract_tables()
             self.electric_details_tbl = table[0]
             self.gas_details_tbl = table[1]
 
         # Extract fields
+        self._extract_credit()
         self._extract_electric()
         self._extract_gas()
 
+    def clear(self):
+        self._init_details()
 
     # Private Methods
+    def _extract_credit(self):
+        for item in self.credit_details_tbl:
+            row = (item[0] or "").splitlines()
+            for entry in row:
+                # print(entry)
+                self._extract_credit_value(self.electric_details, entry)
+
     def _extract_electric(self):
         for item in self.electric_details_tbl:
             row = (item[0] or "").splitlines()
@@ -98,6 +120,10 @@ class BGEBillParser:
     def _extract_total_price(self, output_dict:dict, entry:str):
         if "TOTAL" in entry:
             output_dict["total_price"] = float(re.search(r"\$(\d+\.\d+)", entry).group(1))
+    ## Optional credits
+    def _extract_credit_value(self, output_dict:dict, entry:str):
+        if "Otherchargesandcredits" in entry:
+            output_dict["credit_value"] = -1*float(re.search(r"\$(\d+\.\d+)", entry).group(1))
     
     ## Supply
     def _extract_supply(self, output_dict:dict, row:list, entry:str):
@@ -162,6 +188,7 @@ class BGEBillParser:
             output_dict["billing_period_end"] = "1970-01-01"
             output_dict["total_kWh"] = 0
             output_dict["total_price"] = 0
+            output_dict["credit_value"] = 0
             output_dict["supply_0_rate"] = 0
             output_dict["supply_0_energy"] = 0
             output_dict["supply_0_price"] = 0
