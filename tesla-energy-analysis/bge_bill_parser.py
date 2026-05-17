@@ -152,7 +152,7 @@ class BGEBillParser:
     ## Customer Charge
     def _extract_customer_chg(self, output_dict:dict, entry:str):
         if "CustomerCharge" in entry:
-            output_dict["delivery_cust_price"] = entry.split(" ")[1]
+            output_dict["delivery_cust_price"] = float(entry.split(" ")[1])
     ## EmPower MD Charge
     def _extract_empower(self, output_dict:dict, entry:str):
         if "EmPowerMDChg" in entry:
@@ -189,39 +189,39 @@ class BGEBillParser:
             # UNIX Epoch as placeholder
             output_dict["billing_period_start"] = "1970-01-01"
             output_dict["billing_period_end"] = "1970-01-01"
-            output_dict["total_kWh"] = 0
-            output_dict["total_price"] = 0
-            output_dict["credit_value"] = 0
-            output_dict["supply_0_rate"] = 0
-            output_dict["supply_0_energy"] = 0
-            output_dict["supply_0_price"] = 0
-            output_dict["delivery_cust_price"] = 0
-            output_dict["delivery_distribution_rate"] = 0
-            output_dict["delivery_distribution_price"] = 0
-            output_dict["delivery_empower_md_rate"] = 0
-            output_dict["delivery_empower_md_price"] = 0
-            output_dict["md_svc_prog_fee_price"] = 0
-            output_dict["env_surchg_fee_rate"] = 0
-            output_dict["env_surchg_fee_price"] = 0
-            output_dict["franchise_tax_rate"] = 0
-            output_dict["franchise_tax_price"] = 0
+            output_dict["total_kWh"] = 0.0
+            output_dict["total_price"] = 0.0
+            output_dict["credit_value"] = 0.0
+            output_dict["supply_0_rate"] = 0.0
+            output_dict["supply_0_energy"] = 0.0
+            output_dict["supply_0_price"] = 0.0
+            output_dict["delivery_cust_price"] = 0.0
+            output_dict["delivery_distribution_rate"] = 0.0
+            output_dict["delivery_distribution_price"] = 0.0
+            output_dict["delivery_empower_md_rate"] = 0.0
+            output_dict["delivery_empower_md_price"] = 0.0
+            output_dict["md_svc_prog_fee_price"] = 0.0
+            output_dict["env_surchg_fee_rate"] = 0.0
+            output_dict["env_surchg_fee_price"] = 0.0
+            output_dict["franchise_tax_rate"] = 0.0
+            output_dict["franchise_tax_price"] = 0.0
         
         if filter == "GAS":
             output_dict["class"] = "gas"
             output_dict["billing_period_start"] = "1970-01-01"
             output_dict["billing_period_end"] = "1970-01-01"
-            output_dict["units"] = 0
-            output_dict["total_therms"] = 0
-            output_dict["therm_factor"] = 0
-            output_dict["total_price"] = 0
-            output_dict["supply_0_rate"] = 0
-            output_dict["supply_0_energy"] = 0
-            output_dict["supply_0_price"] = 0
-            output_dict["delivery_cust_price"] = 0
-            output_dict["delivery_distribution_rate"] = 0
-            output_dict["delivery_distribution_price"] = 0
-            output_dict["delivery_empower_md_rate"] = 0
-            output_dict["delivery_empower_md_price"] = 0
+            output_dict["units"] = 0.0
+            output_dict["total_therms"] = 0.0
+            output_dict["therm_factor"] = 0.0
+            output_dict["total_price"] = 0.0
+            output_dict["supply_0_rate"] = 0.0
+            output_dict["supply_0_energy"] = 0.0
+            output_dict["supply_0_price"] = 0.0
+            output_dict["delivery_cust_price"] = 0.0
+            output_dict["delivery_distribution_rate"] = 0.0
+            output_dict["delivery_distribution_price"] = 0.0
+            output_dict["delivery_empower_md_rate"] = 0.0
+            output_dict["delivery_empower_md_price"] = 0.0
 
     # Function returns standard date output; Jun22,2025 -> 2025-06-22
     def _format_date(self, input_date:str):
