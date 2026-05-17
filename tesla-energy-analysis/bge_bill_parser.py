@@ -20,10 +20,10 @@ class BGEBillParser:
     # Public Methods
 
     def get_electric(self):
-        return self.electric_details
+        return dict(sorted(self.electric_details.items()))
     
     def get_gas(self):
-        return self.gas_details
+        return dict(sorted(self.gas_details.items()))
     
     def process_pdf(self, bill_path:str, bill_page:int):
         self.bill_path = bill_path
@@ -33,14 +33,15 @@ class BGEBillParser:
             self.electric_details_tbl = table[0]
             self.gas_details_tbl = table[1]
 
+        # Extract fields
         self._extract_electric()
+        self._extract_gas()
 
 
     # Private Methods
     def _extract_electric(self):
         for item in self.electric_details_tbl:
             row = (item[0] or "").splitlines()
-
             for entry in row:
                 self._extract_billing_period(self.electric_details, entry)
                 self._extract_total_kwh(self.electric_details, entry)
@@ -52,6 +53,18 @@ class BGEBillParser:
                 self._extract_md_svc(self.electric_details, entry)
                 self._extract_env(self.electric_details, entry)
                 self._extract_franchise(self.electric_details, entry)
+
+    def _extract_gas(self):
+        for item in self.gas_details_tbl:
+            row = (item[0] or "").splitlines()
+            print(row)
+            for entry in row:
+                self._extract_billing_period(self.gas_details, entry)
+                self._extract_total_price(self.gas_details, entry)
+                self._extract_supply(self.gas_details, row, entry)
+                self._extract_customer_chg(self.gas_details, entry)
+                self._extract_empower(self.gas_details, entry)
+                self._extract_distribution(self.gas_details, entry)
 
     ## Field Extraction methods below
     def _extract_billing_period(self, output_dict:dict, entry:str):
@@ -68,7 +81,7 @@ class BGEBillParser:
     ## Total Price
     def _extract_total_price(self, output_dict:dict, entry:str):
         if "TOTAL" in entry:
-            output_dict["total_price_electric"] = float(re.search(r"\$(\d+\.\d+)", entry).group(1))
+            output_dict["total_price"] = float(re.search(r"\$(\d+\.\d+)", entry).group(1))
     
     ## Supply
     def _extract_supply(self, output_dict:dict, row:list, entry:str):
@@ -90,7 +103,7 @@ class BGEBillParser:
                 rate_price_key = f"supply_{i}_price"
 
                 # Skips first entry
-                output_dict[rate_energy_key] = float(re.search(r"(\d+(?:\.\d+)?)kWh", search_idx).group(1))
+                output_dict[rate_energy_key] = float(re.search(pattern, search_idx).group(1))
                 output_dict[rate_key] = float(re.search(r"x\s*(\.\d+)", search_idx).group(1))
                 output_dict[rate_price_key] = search_idx.split(" ")[-1]
     
@@ -151,6 +164,7 @@ class BGEBillParser:
             output_dict["class"] = "gas"
             output_dict["billing_period_start"] = "1970-01-01"
             output_dict["billing_period_end"] = "1970-01-01"
+            output_dict["units"] = 0
             output_dict["total_therms"] = 0
             output_dict["therm_factor"] = 0
             output_dict["total_price"] = 0
@@ -158,8 +172,10 @@ class BGEBillParser:
             output_dict["supply_0_energy"] = 0
             output_dict["supply_0_price"] = 0
             output_dict["delivery_cust_price"] = 0
-            output_dict["gas_supply_0_rate"] = 0
-            output_dict["gas_supply_0_rate"] = 0
+            output_dict["delivery_distribution_rate"] = 0
+            output_dict["delivery_distribution_price"] = 0
+            output_dict["delivery_empower_md_rate"] = 0
+            output_dict["delivery_empower_md_price"] = 0
 
     # Function returns standard date output; Jun22,2025 -> 2025-06-22
     def _format_date(self, input_date:str):
@@ -169,6 +185,7 @@ class BGEBillParser:
     
 
 test = BGEBillParser()
-test.process_pdf("BGE/20250716.pdf" ,1)
+test.process_pdf("BGE/20250815.pdf" ,1)
 ed = test.get_electric()
-print(ed)
+gas = test.get_gas()
+print(gas)
