@@ -18,6 +18,12 @@ class BGEBillParser:
         self.gas_details_tbl = []
 
     # Public Methods
+
+    def get_electric(self):
+        return self.electric_details
+    
+    def get_gas(self):
+        return self.gas_details
     
     def process_pdf(self, bill_path:str, bill_page:int):
         self.bill_path = bill_path
@@ -27,12 +33,60 @@ class BGEBillParser:
             self.electric_details_tbl = table[0]
             self.gas_details_tbl = table[1]
 
-        _extract_electric()
-        _extract_gas()
-
+        self._extract_electric()
 
 
     # Private Methods
+    def _extract_electric(self):
+        for item in self.electric_details_tbl:
+            row = (item[0] or "").splitlines()
+
+            for entry in row:
+                self._extract_billing_period(self.electric_details, entry)
+                self._extract_total_kwh(self.electric_details, entry)
+                self._extract_total_price(self.electric_details, entry)
+                self._extract_supply(self.electric_details, row, entry)
+
+    ## Field Extraction methods below
+    def _extract_billing_period(self, output_dict:dict, entry:str):
+        if "BillingPeriod" in entry:
+            date_pattern = r'[A-Z][a-z]{2}\d{1,2},\d{4}'
+            dates = re.findall(date_pattern, entry)
+            output_dict["billing_period_start"] = self._format_date(dates[0])
+            output_dict["billing_period_end"] = self._format_date(dates[1])
+
+    def _extract_total_kwh(self, output_dict:dict, entry:str):
+        if "Current - Previous" in entry:
+            output_dict["total_kWh"] = float(entry.split("= ")[1])
+
+    def _extract_total_price(self, output_dict:dict, entry:str):
+        if "TOTAL" in entry:
+            output_dict["total_price_electric"] = float(re.search(r"\$(\d+\.\d+)", entry).group(1))
+
+    def _extract_supply(self, output_dict:dict, row:list, entry:str):
+        if output_dict["class"] == "electric":
+            filters = ["ELECTRICSUPPLY", "BGEELECTRICDELIVERY"]
+            pattern = r"(\d+(?:\.\d+)?)kWh"
+        if output_dict["class"] == "gas":
+            filters = ["GASSUPPLY", "BGEGASDELIVERY"]
+            pattern = r"(\d+(?:\.\d+)?)therms"
+
+            if filter[0] in entry:
+                indices = [i for i, target in enumerate(row) if filter[0] in target or filter[1] in target]
+                number_rates = indices[1] - indices[0] - 1
+                for i in range(0,number_rates):
+                    # Skip first entry b/c it's an anchor
+                    search_idx = row[i+1]
+                    rate_key = f"electric_supply_{i}_rate"
+                    rate_energy_key = f"electric_supply_{i}_energy"
+                    rate_price_key = f"electric_supply_{i}_price"
+
+                    # Skips first entry
+                    output_dict[rate_energy_key] = float(re.search(r"(\d+(?:\.\d+)?)kWh", search_idx).group(1))
+                    output_dict[rate_key] = float(re.search(r"x\s*(\.\d+)", search_idx).group(1))
+                    output_dict[rate_price_key] = search_idx.split(" ")[-1]
+
+
     def _init_details(self, filter:str, output_dict:dict):
         if filter == "ELECTRIC":
             output_dict["class"] = "electric"
@@ -70,8 +124,13 @@ class BGEBillParser:
             output_dict["gas_supply_0_rate"] = 0
 
     # Function returns standard date output; Jun22,2025 -> 2025-06-22
-    def _format_date(input_date:str):
+    def _format_date(self, input_date:str):
         # Expects abbreviated month name
         date_obj = datetime.strptime(input_date, "%b%d,%Y")
         return date_obj.strftime("%Y-%m-%d")
     
+
+test = BGEBillParser()
+test.process_pdf("BGE/20250815.pdf" ,1)
+ed = test.get_electric()
+print(ed)
